@@ -7,9 +7,7 @@ output:
   html_document: default
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
 
 ## 1. Introduction
 Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har> (see the section on the Weight Lifting Exercise Dataset).
@@ -29,7 +27,8 @@ The goal of your project is to predict the manner in which they did the exercise
 * You should also apply your machine learning algorithm to the 20 test cases available in the test data above. Please submit your predictions in appropriate format to the programming assignment for automated grading. See the programming assignment for additional details.
 
 ### Load packages, libraries and set seed
-```{r, echo =TRUE, message=FALSE}
+
+```r
 setwd("C:/Users/raish/mlfinalproject") # Working Directory
 library(caret); library(randomForest); library(rpart)
 library(rpart.plot); library(RColorBrewer); library(rattle)
@@ -38,7 +37,8 @@ set.seed(1234)
 
 ## 2. Getting and Cleaning the Data
 
-```{r, echo = TRUE}
+
+```r
 # 'training' data file
 trainFile <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv" 
 #'testing' data file
@@ -46,29 +46,41 @@ testFile <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
 ```
 
 Load the data 
-```{r,echo=TRUE}
+
+```r
 training <- read.csv(url(trainFile), na.strings = c("NA", "#DIV/0!", ""))
 testing <- read.csv(url(testFile), na.strings = c("NA", "#DIV/0!", ""))
 ```
 
 Partitioning the data
-```{r, echo=TRUE}
+
+```r
 inTrain <- createDataPartition(y=training$classe, p=0.6, list=FALSE)
 myTraining <- training[inTrain, ]
 myTesting <- training[-inTrain, ]
 dim(myTraining);dim(myTesting)
 ```
 
+```
+## [1] 11776   160
+```
+
+```
+## [1] 7846  160
+```
+
 The following transformations are done to clean the data:
 **Transformation 1:** Cleaning `NearZeroVariance` variables. (Run this code to view possible NearZeroVariance variables)
 
-```{r, eval=FALSE}
+
+```r
 myDataNZV <- nearZeroVar(myTraining, saveMetrics=TRUE)
 ```
 
 We create a subset of NearZeroVariance variables,
 
-```{r, echo=TRUE}
+
+```r
 myNZV <- names(myTraining) %in% c("new_window", "kurtosis_roll_belt", "kurtosis_picth_belt",
 "kurtosis_yaw_belt", "skewness_roll_belt", "skewness_roll_belt.1", "skewness_yaw_belt",
 "max_yaw_belt", "min_yaw_belt", "amplitude_yaw_belt", "avg_roll_arm", "stddev_roll_arm",
@@ -88,15 +100,21 @@ myTraining <- myTraining[!myNZV]
 dim(myTraining)
 ```
 
+```
+## [1] 11776   100
+```
+
 **Transformation 2:** Removing first column of Dataset - Removing first variable so that it does not interfere with the machine learning algorithms:
 
-```{r, echo=TRUE}
+
+```r
 myTraining <- myTraining[c(-1)]
 ```
 
 **Transformation 3:** Cleaning the variables which has too many NA's. For Variables that have more than a 60% threshold of NA's we will ignore them.
 
-```{r, echo=TRUE}
+
+```r
 trainingV3 <- myTraining #creating another subset to iterate in loop
 for(i in 1:length(myTraining)) { #for every column in the training dataset
         if( sum(is.na( myTraining[, i] ) ) /nrow(myTraining) >= .6 ) { #if n?? NAs > 60% of total observations
@@ -111,7 +129,12 @@ for(i in 1:length(myTraining)) { #for every column in the training dataset
 dim(trainingV3)
 ```
 
-```{r}
+```
+## [1] 11776    58
+```
+
+
+```r
 #Setting back to our set:
 myTraining <- trainingV3
 rm(trainingV3)
@@ -119,7 +142,8 @@ rm(trainingV3)
 
 Now we perform the same 3 transformations for `myTesting` and `testing` data sets.
 
-```{r, echo = TRUE}
+
+```r
 clean1 <- colnames(myTraining)
 clean2 <- colnames(myTraining[, -58]) #already with classe column removed
 myTesting <- myTesting[clean1]
@@ -127,13 +151,25 @@ testing <- testing[clean2]
 
 #To check the new N?? of observations
 dim(myTesting)
+```
+
+```
+## [1] 7846   58
+```
+
+```r
 #To check the new N?? of observations
 dim(testing)
 ```
 
+```
+## [1] 20 57
+```
+
 To ensure proper functioning of Decision Trees and especially RandomForest Algorithm with the Test data set (data set provided), we need to coerce the data into the same type.
 
-```{r, echo=TRUE}
+
+```r
 for (i in 1:length(testing) ) {
         for(j in 1:length(myTraining)) {
         if( length( grep(names(myTraining[i]), names(testing)[j]) ) ==1)  {
@@ -148,43 +184,120 @@ testing <- testing[-1,]
 
 ## 3. Using Machine Learning algorithm for prediction: Decision Tree
 
-```{r, echo=TRUE}
+
+```r
 modFitA1 <- rpart(classe ~ ., data=myTraining, method="class")
 ```
 
 To view the decision tree with fancy :
 
-```{r,echo =TRUE}
+
+```r
 fancyRpartPlot(modFitA1)
 ```
 
+![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13-1.png)
+
 ### Prediction
 
-```{r, echo=TRUE}
+
+```r
 predictionsA1 <- predict(modFitA1, myTesting, type = "class")
 ```
 
 Using confusion Matrix to test results:
 
-```{r,echo=TRUE}
+
+```r
 confusionMatrix(predictionsA1, myTesting$classe)
+```
+
+```
+## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 2161   61    5    3    0
+##          B   50 1271   95   64    0
+##          C   21  177 1242  203   65
+##          D    0    9   19  899   92
+##          E    0    0    7  117 1285
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.8741          
+##                  95% CI : (0.8665, 0.8813)
+##     No Information Rate : 0.2845          
+##     P-Value [Acc > NIR] : < 2.2e-16       
+##                                           
+##                   Kappa : 0.8407          
+##  Mcnemar's Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9682   0.8373   0.9079   0.6991   0.8911
+## Specificity            0.9877   0.9670   0.9281   0.9817   0.9806
+## Pos Pred Value         0.9691   0.8588   0.7272   0.8822   0.9120
+## Neg Pred Value         0.9874   0.9612   0.9795   0.9433   0.9756
+## Prevalence             0.2845   0.1935   0.1744   0.1639   0.1838
+## Detection Rate         0.2754   0.1620   0.1583   0.1146   0.1638
+## Detection Prevalence   0.2842   0.1886   0.2177   0.1299   0.1796
+## Balanced Accuracy      0.9779   0.9021   0.9180   0.8404   0.9359
 ```
 
 ## 4. Using ML algorithms for prediction: Random Forests
 
-```{r}
+
+```r
 modFitB1 <- randomForest(classe ~. , data=myTraining)
 ```
 
 Predicting in-sample error:
-```{r}
+
+```r
 predictionsB1 <- predict(modFitB1, myTesting, type = "class")
 ```
 
 Using confusion Matrix to test results:
 
-```{r}
+
+```r
 confusionMatrix(predictionsB1, myTesting$classe)
+```
+
+```
+## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 2232    2    0    0    0
+##          B    0 1516    4    0    0
+##          C    0    0 1362    5    0
+##          D    0    0    2 1280    0
+##          E    0    0    0    1 1442
+## 
+## Overall Statistics
+##                                         
+##                Accuracy : 0.9982        
+##                  95% CI : (0.997, 0.999)
+##     No Information Rate : 0.2845        
+##     P-Value [Acc > NIR] : < 2.2e-16     
+##                                         
+##                   Kappa : 0.9977        
+##  Mcnemar's Test P-Value : NA            
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            1.0000   0.9987   0.9956   0.9953   1.0000
+## Specificity            0.9996   0.9994   0.9992   0.9997   0.9998
+## Pos Pred Value         0.9991   0.9974   0.9963   0.9984   0.9993
+## Neg Pred Value         1.0000   0.9997   0.9991   0.9991   1.0000
+## Prevalence             0.2845   0.1935   0.1744   0.1639   0.1838
+## Detection Rate         0.2845   0.1932   0.1736   0.1631   0.1838
+## Detection Prevalence   0.2847   0.1937   0.1742   0.1634   0.1839
+## Balanced Accuracy      0.9998   0.9990   0.9974   0.9975   0.9999
 ```
 
 Thus we can see that Random Forests yielded better Results.
@@ -202,13 +315,15 @@ Finally, using the provided Test Set out-of-sample error.
 
 For Random Forests we use the following formula, which yielded a much better prediction in in-sample:
 
-```{r}
+
+```r
 predictionsB2 <- predict(modFitB1, testing, type = "class")
 ```
 
 Function to generate files with predictions to submit for assignment
 
-```{r}
+
+```r
 pml_write_files = function(x){
   n = length(x)
   for(i in 1:n){
